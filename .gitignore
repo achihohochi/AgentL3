@@ -1,0 +1,30 @@
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+
+# Virtual envs anywhere
+**/.venv/
+**/venv/
+**/env/
+
+# Secrets (.env anywhere, plus explicit backend path)
+**/.env
+backend/.env
+
+# Runtime artifacts
+backend/uploads/
+
+# Local logs (keep curated samples under data/samples/)
+backend/**/*.log
+
+# Node/JS (if added later)
+node_modules/
+dist/
+build/

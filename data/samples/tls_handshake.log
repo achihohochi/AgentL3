@@ -1,0 +1,3 @@
+2025-01-05 14:33:10 ERROR upstream tls: handshake failure alert=handshake_failure sni=api.thirdparty.com
+2025-01-05 14:33:11 ERROR tls: certificate expired notAfter=2025-01-01T00:00:00Z peer=payments.partner.net
+2025-01-05 14:33:13 WARN  retrying with TLS1.2 fallback failed

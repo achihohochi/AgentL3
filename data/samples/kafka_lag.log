@@ -1,0 +1,3 @@
+2025-01-05 14:32:01 ERROR consumer: group=orders-consumer partition=7 lag=182345 behind by 00:11:32
+2025-01-05 14:32:03 WARN  rebalance in progress; pausing fetch
+2025-01-05 14:32:05 ERROR processing timeout handler=OrderEventsHandler duration=32s

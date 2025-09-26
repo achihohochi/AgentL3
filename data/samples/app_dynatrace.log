@@ -1,0 +1,4 @@
+2025-01-05 14:30:15,842 ERROR DatabasePool Timeout after 30s; pool_size=50; in_use=50; waiters=12
+2025-01-05 14:30:17,003 WARN  UserService Auth failure: db connection refused
+2025-01-05 14:30:18,219 ERROR OrderService SQLTimeoutException processing order#12345
+2025-01-05 14:30:20,112 ERROR HealthCheck DB health degraded (p95=3.2s)

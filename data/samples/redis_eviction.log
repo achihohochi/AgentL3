@@ -1,0 +1,4 @@
+2025-01-05 14:31:10 ERROR redis: OOM command not allowed when used memory > 'maxmemory'
+2025-01-05 14:31:12 WARN  cache: eviction spike keys_evicted=1241 strategy=allkeys-lru
+2025-01-05 14:31:14 ERROR cache: thundering herd on /product/1234 after TTL expiry
+2025-01-05 14:31:15 WARN  requests coalesced=0 miss_rate=0.72

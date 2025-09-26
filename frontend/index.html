@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AgentL3 • Incident Copilot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .pill { @apply inline-flex items-center rounded-full px-3 py-1 text-sm bg-slate-100; }
+    .muted { @apply text-slate-500; }
+    .card { @apply bg-white rounded-2xl shadow p-5; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto p-6 space-y-6">
+    <header class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">AgentL3 • Incident Copilot</h1>
+        <p class="muted">Upload logs → analyze → results → Q&A with citations.</p>
+      </div>
+      <div id="health" class="pill">checking backend…</div>
+    </header>
+
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">1) Upload log files</h2>
+      <p class="muted mb-4">Accepted: <span class="mono">.log .txt .json</span> (multiple allowed)</p>
+
+      <!-- Controls row -->
+      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <input id="fileInput" type="file" multiple class="block w-full text-sm text-slate-600
+               file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+               file:text-sm file:font-semibold file:bg-slate-900 file:text-white
+               hover:file:bg-slate-800" />
+        <button id="analyzeBtn" class="px-4 py-2 rounded-lg bg-slate-900 text-white disabled:opacity-40">
+          Analyze
+        </button>
+        <!-- NEW: live count -->
+        <span id="fileCount" class="muted text-sm">no files selected</span>
+      </div>
+
+      <!-- NEW: list of selected files -->
+      <div id="fileList" class="mono text-xs text-slate-700 mt-2"></div>
+
+      <p id="uploadHint" class="muted mt-2"></p>
+    </section>
+
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">2) Job status</h2>
+      <div class="flex items-center gap-3">
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all" style="width:0%"></div>
+        </div>
+        <div id="progressNum" class="w-12 text-right tabular-nums">0%</div>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span class="muted">Stage:</span><span id="stage" class="pill">–</span>
+        <span class="muted">Message:</span><span id="message" class="pill">–</span>
+        <span class="muted">Job ID:</span><span id="jobId" class="pill mono">–</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">3) Result</h2>
+      <div id="resultEmpty" class="muted">Run an analysis to see results here.</div>
+      <div id="result" class="hidden space-y-6">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold">Summary</h3>
+            <div class="flex items-center gap-2">
+              <span class="muted text-sm">Confidence</span>
+              <div class="w-40 bg-slate-100 rounded-full h-2">
+                <div id="confBar" class="bg-indigo-500 h-2 rounded-full"></div>
+              </div>
+              <span id="confText" class="muted text-sm tabular-nums">0.00</span>
+            </div>
+          </div>
+          <p id="summary" class="leading-relaxed"></p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div>
+              <h4 class="font-semibold mb-2">Timeline</h4>
+              <ul id="timeline" class="space-y-2"></ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Immediate evidence</h4>
+              <ul id="evidence" class="list-disc ml-5 space-y-1"></ul>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <h4 class="font-semibold mb-2">Root causes</h4>
+              <ul id="rootCauses" class="space-y-2"></ul>
+            </div>
+            <div>
+              <h4 class="font-semibold mb-2">Next steps</h4>
+              <ul id="nextSteps" class="list-disc ml-5 space-y-1"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-semibold mb-2">Related cases</h4>
+            <ul id="relatedCases" class="list-disc ml-5 space-y-1"></ul>
+          </div>
+          <div>
+            <h4 class="font-semibold mb-2">References</h4>
+            <ul id="references" class="space-y-2"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">4) Ask a follow-up</h2>
+      <div class="flex flex-col md:flex-row gap-3 items-start md:items-center">
+        <input id="question" class="w-full md:flex-1 px-3 py-2 rounded-lg border border-slate-300"
+               placeholder="e.g. What likely triggered the restarts?" />
+        <button id="askBtn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-40">Ask</button>
+      </div>
+      <div id="qa" class="mt-4 hidden">
+        <div class="mb-2">
+          <span class="muted text-sm">Answer confidence</span>
+          <div class="w-40 bg-slate-100 rounded-full h-2 inline-block align-middle ml-2">
+            <div id="qaConfBar" class="bg-indigo-500 h-2 rounded-full"></div>
+          </div>
+          <span id="qaConfText" class="muted text-sm tabular-nums ml-2">0.00</span>
+        </div>
+        <p id="answer" class="leading-relaxed"></p>
+        <h4 class="font-semibold mt-4">Citations</h4>
+        <ul id="citations" class="mono text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2"></ul>
+      </div>
+      <p id="qaHint" class="muted mt-2">Available after an analysis finishes.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="text-lg font-semibold mb-3">5) Debug triage query</h2>
+      <button id="showQueryBtn" class="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 disabled:opacity-40">Show triage query</button>
+      <pre id="queryText" class="mono text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 mt-3 hidden overflow-x-auto"></pre>
+    </section>
+  </div>
+
+  <script>
+    const BACKEND_BASE = `${location.protocol}//${location.host}`;
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { $(id).textContent = v; };
+    const setWidthPct = (el, pct) => el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    const show = (id) => $(id).classList.remove('hidden');
+    const hide = (id) => $(id).classList.add('hidden');
+
+    let currentJobId = null;
+    let statusTimer = null;
+
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${BACKEND_BASE}/healthz`);
+        const data = await res.json();
+        const ok = data?.ok;
+        const tags = [];
+        for (const [k,v] of Object.entries(data?.env || {})) {
+          tags.push(`${k}:${v ? '✔︎' : '✖︎'}`);
+        }
+        const el = $('health');
+        el.textContent = ok ? `backend: healthy (${tags.join(' · ')})` : 'backend: unreachable';
+        el.className = ok ? 'pill bg-emerald-50 text-emerald-700' : 'pill bg-rose-50 text-rose-700';
+      } catch {
+        const el = $('health');
+        el.textContent = 'backend: unreachable';
+        el.className = 'pill bg-rose-50 text-rose-700';
+      }
+    }
+
+    // ---------- NEW: file selection preview (count + names) ----------
+    const fileInput   = $('fileInput');
+    const fileCountEl = $('fileCount');
+    const fileListEl  = $('fileList');
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function humanSize(bytes) {
+      const units = ["B","KB","MB","GB","TB"];
+      let i = 0, v = Math.max(bytes || 0, 0);
+      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+      const fixed = v < 10 && i > 0 ? 1 : 0;
+      return `${v.toFixed(fixed)} ${units[i]}`;
+    }
+
+    function renderSelectedFiles(list) {
+      const files = Array.from(list || []);
+      if (files.length === 0) {
+        fileCountEl.textContent = "no files selected";
+        fileListEl.innerHTML = "";
+        return;
+      }
+      fileCountEl.textContent = files.length === 1 ? "1 file" : `${files.length} files`;
+      fileListEl.innerHTML = `
+        <ul class="list-disc ml-5">
+          ${files.map(f => `
+            <li>${escapeHtml(f.name)} <span class="text-slate-400">(${humanSize(f.size)})</span></li>
+          `).join("")}
+        </ul>
+      `;
+    }
+
+    // Initial render & on change
+    renderSelectedFiles(fileInput.files);
+    fileInput.addEventListener('change', () => renderSelectedFiles(fileInput.files));
+    // ----------------------------------------------------------------
+
+    $('analyzeBtn').addEventListener('click', async () => {
+      const files = $('fileInput').files;
+      if (!files || !files.length) {
+        $('uploadHint').textContent = 'Please select one or more files first.';
+        return;
+      }
+      $('uploadHint').textContent = '';
+
+      const fd = new FormData();
+      for (const f of files) fd.append('files', f);
+
+      $('analyzeBtn').disabled = true;
+      try {
+        const res = await fetch(`${BACKEND_BASE}/analyze`, { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(await res.text());
+        const { job_id } = await res.json();
+        currentJobId = job_id;
+        setText('jobId', job_id);
+        setText('stage', 'queued');
+        setText('message', 'Queued');
+        setText('progressNum', '0%');
+        setWidthPct($('progressBar'), 0);
+        hide('result'); show('resultEmpty');
+        $('askBtn').disabled = true;
+        $('qa').classList.add('hidden');
+        $('queryText').classList.add('hidden');
+        $('showQueryBtn').disabled = false;
+        if (statusTimer) clearInterval(statusTimer);
+        statusTimer = setInterval(pollStatus, 800);
+      } catch (e) {
+        $('uploadHint').textContent = `Upload failed: ${e}`;
+      } finally {
+        $('analyzeBtn').disabled = false;
+      }
+    });
+
+    async function pollStatus() {
+      if (!currentJobId) return;
+      try {
+        const res = await fetch(`${BACKEND_BASE}/status/${currentJobId}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setText('stage', data.stage || '—');
+        setText('message', data.message || '—');
+        setText('progressNum', `${data.progress ?? 0}%`);
+        setWidthPct($('progressBar'), data.progress ?? 0);
+        if (data.stage === 'done') {
+          clearInterval(statusTimer);
+          await loadResult();
+          $('askBtn').disabled = false;
+        }
+        if (data.stage === 'error') clearInterval(statusTimer);
+      } catch (e) {
+        // keep polling quietly
+      }
+    }
+
+    async function loadResult() {
+      const res = await fetch(`${BACKEND_BASE}/result/${currentJobId}`);
+      if (!res.ok) { hide('result'); show('resultEmpty'); return; }
+      const r = await res.json();
+      hide('resultEmpty'); show('result');
+
+      setText('summary', r.summary || '—');
+      const conf = Number(r.confidence ?? 0);
+      setWidthPct($('confBar'), conf * 100);
+      setText('confText', conf.toFixed(2));
+
+      const t = $('timeline'); t.innerHTML = '';
+      (r.timeline || []).forEach(ev => {
+        const li = document.createElement('li');
+        li.innerHTML = `<div class="flex items-start gap-3">
+          <span class="pill mono">${ev.time || '-'}</span>
+          <div><div class="mono text-xs uppercase muted">${ev.source || ''}</div>${ev.message || ''}</div>
+        </div>`;
+        t.appendChild(li);
+      });
+
+      const evul = $('evidence'); evul.innerHTML = '';
+      (r.immediate_evidence || []).forEach(s => {
+        const li = document.createElement('li'); li.textContent = s; evul.appendChild(li);
+      });
+
+      const rc = $('rootCauses'); rc.innerHTML = '';
+      (r.root_causes || []).forEach(x => {
+        const li = document.createElement('li');
+        const c = Number(x.confidence ?? 0);
+        li.innerHTML = `<div class="flex items-center justify-between">
+          <div>${x.cause || ''}</div>
+          <div class="flex items-center gap-2">
+            <span class="muted text-xs">conf</span>
+            <div class="w-24 bg-slate-100 rounded-full h-2">
+              <div class="bg-emerald-500 h-2 rounded-full" style="width:${(c*100).toFixed(0)}%"></div>
+            </div>
+            <span class="muted text-xs tabular-nums">${c.toFixed(2)}</span>
+          </div>
+        </div>`;
+        rc.appendChild(li);
+      });
+
+      const ns = $('nextSteps'); ns.innerHTML = '';
+      (r.next_steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ns.appendChild(li); });
+
+      const rel = $('relatedCases'); rel.innerHTML = '';
+      (r.related_cases || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; rel.appendChild(li); });
+
+      const ref = $('references'); ref.innerHTML = '';
+      (r.references || []).forEach(x => {
+        const li = document.createElement('li');
+        li.innerHTML = `<div class="p-3 rounded-lg border border-slate-200 bg-slate-50">
+          <div class="mono text-xs uppercase muted mb-1">${x.source || 'source'}</div>
+          <div class="mono text-sm whitespace-pre-wrap">${x.snippet || ''}</div>
+        </div>`;
+        ref.appendChild(li);
+      });
+    }
+
+    $('askBtn').addEventListener('click', async () => {
+      const q = $('question').value.trim();
+      if (!currentJobId || !q) return;
+      $('askBtn').disabled = true;
+      $('qa').classList.add('hidden');
+      $('qaHint').textContent = '';
+      try {
+        const res = await fetch(`${BACKEND_BASE}/ask/${currentJobId}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q })
+        });
+        if (res.status === 404) { $('qaHint').textContent = 'Q&A endpoint not available on this backend.'; return; }
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setText('answer', data.answer || '—');
+        const c = Number(data.confidence ?? 0);
+        setWidthPct($('qaConfBar'), c * 100);
+        setText('qaConfText', c.toFixed(2));
+        const ul = $('citations'); ul.innerHTML = '';
+        (data.citations || []).forEach(x => {
+          const li = document.createElement('li');
+          li.textContent = `${x.source || 'app.log'}  —  ${x.snippet || ''}`;
+          ul.appendChild(li);
+        });
+        $('qa').classList.remove('hidden');
+      } catch (e) {
+        $('qaHint').textContent = `Ask failed: ${e}`;
+      } finally {
+        $('askBtn').disabled = false;
+      }
+    });
+
+    $('showQueryBtn').addEventListener('click', async () => {
+      if (!currentJobId) return;
+      $('showQueryBtn').disabled = true;
+      try {
+        const res = await fetch(`${BACKEND_BASE}/debug/query/${currentJobId}`);
+        if (!res.ok) throw new Error(await res.text());
+        const txt = await res.text();
+        $('queryText').textContent = txt;
+        $('queryText').classList.remove('hidden');
+      } catch (e) {
+        $('queryText').textContent = `Not available: ${e}`;
+        $('queryText').classList.remove('hidden');
+      } finally {
+        $('showQueryBtn').disabled = false;
+      }
+    });
+
+    checkHealth();
+  </script>
+</body>
+</html>

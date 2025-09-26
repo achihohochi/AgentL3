@@ -1,0 +1,2 @@
+{"@timestamp":"2025-01-05T14:30:15Z","level":"error","message":"DatabasePool Timeout after 30s","pool_size":50,"in_use":50,"waiters":12}
+{"@timestamp":"2025-01-05T14:30:18Z","level":"warn","message":"OrderService SQLTimeoutException processing order#12345"}

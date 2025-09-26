@@ -1,0 +1,4 @@
+2025-01-05 14:30:18 ERROR OrderService - java.sql.SQLTimeoutException: Query timed out
+	at com.example.order.PaymentDao.charge(PaymentDao.java:121)
+	at com.example.order.OrderService.processPayment(OrderService.java:88)
+Caused by: java.net.SocketTimeoutException: Read timed out
