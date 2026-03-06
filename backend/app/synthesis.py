@@ -96,7 +96,15 @@ def synthesize_with_llm(query_text: str, top_lines: List[str], related_cases: Li
         '"immediate_evidence": [string], '
         '"root_causes": [{"cause": string,"confidence": number}], '
         '"next_steps": [string], '
-        '"references": [{"source": string,"snippet": string}] }'
+        '"references": [{"source": string,"snippet": string}] } '
+        "CONFIDENCE CALIBRATION — set 'confidence' (and each root_cause 'confidence') "
+        "strictly according to evidence quality: "
+        "0.85-1.0: multiple consistent error signals, unambiguous root cause, strong evidence chain across sources. "
+        "0.65-0.84: clear error signals but some ambiguity, one likely root cause with minor gaps. "
+        "0.45-0.64: partial evidence, multiple plausible causes, incomplete log coverage. "
+        "0.25-0.44: sparse or noisy logs, weak signals, several competing hypotheses. "
+        "0.00-0.24: insufficient evidence to draw reliable conclusions. "
+        "Do NOT default to high values; penalise short, sparse, or ambiguous log input."
     )
 
     top_lines_text = "\n".join(_clip_lines(top_lines, 50))
@@ -170,7 +178,11 @@ def answer_question(question: str, top_lines: List[str], related_cases: List[str
         "and the retrieved past cases. Be concise (<=4 sentences). If there's not enough evidence, "
         'say so. Return strict JSON with keys: '
         '{"answer": string, "confidence": number, "citations": [{"source": string,"snippet": string}]}. '
-        "For citations, use the source names provided (e.g., 'app.log' or postmortem filenames) and short snippets."
+        "For citations, use the source names provided (e.g., 'app.log' or postmortem filenames) and short snippets. "
+        "CONFIDENCE CALIBRATION: 0.85-1.0 only when the logs directly and unambiguously answer the question; "
+        "0.5-0.84 when there is supporting but incomplete evidence; "
+        "0.2-0.49 when the answer is inferred with significant uncertainty; "
+        "0.0-0.19 when the logs provide little or no relevant evidence."
     )
     user = (
         f"QUESTION:\n{question}\n\n"

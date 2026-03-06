@@ -2,148 +2,459 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AgentL3 • The Needler</title>
+  <title>AgentL3 - Incident Haystacker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: '#161b26',
+            'surface-raised': '#1e2433',
+            body: '#0f1117',
+          },
+          keyframes: {
+            'pulse-ring': {
+              '0%': { boxShadow: '0 0 0 0 rgba(99,102,241,0.5)' },
+              '70%': { boxShadow: '0 0 0 8px rgba(99,102,241,0)' },
+              '100%': { boxShadow: '0 0 0 0 rgba(99,102,241,0)' },
+            },
+            'slide-up': {
+              '0%': { opacity: '0', transform: 'translateY(16px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            'typing-dot': {
+              '0%, 80%, 100%': { opacity: '0.3', transform: 'scale(0.8)' },
+              '40%': { opacity: '1', transform: 'scale(1)' },
+            },
+            'gauge-fill': {
+              '0%': { strokeDashoffset: '188.5' },
+            },
+            'fade-in': {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            'health-pulse': {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.5' },
+            },
+          },
+          animation: {
+            'pulse-ring': 'pulse-ring 1.5s ease-in-out infinite',
+            'slide-up': 'slide-up 0.4s ease-out both',
+            'typing-dot': 'typing-dot 1.4s ease-in-out infinite',
+            'gauge-fill': 'gauge-fill 1s ease-out both',
+            'fade-in': 'fade-in 0.3s ease both',
+            'health-pulse': 'health-pulse 2s ease-in-out infinite',
+          },
+        },
+      },
+    }
+  </script>
   <style>
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .pill { @apply inline-flex items-center rounded-full px-3 py-1 text-sm bg-slate-100; }
-    .muted { @apply text-slate-500; }
-    .card { @apply bg-white rounded-2xl shadow p-5; }
+    body {
+      background-color: #0f1117;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.08), transparent),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+    }
+    .card {
+      background: #161b26;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      transition: border-color 0.2s ease;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.1); }
+    .glass {
+      background: rgba(22,27,38,0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+    }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .drop-zone {
+      border: 2px dashed rgba(255,255,255,0.1);
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .drop-zone.dragover {
+      border-color: #6366f1;
+      background: rgba(99,102,241,0.06);
+      box-shadow: inset 0 0 30px rgba(99,102,241,0.05);
+    }
+    .stepper-line { height: 2px; transition: background 0.3s ease; }
+    .stepper-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .collapsible-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.3s ease;
+    }
+    .collapsible-content.open { grid-template-rows: 1fr; }
+    .collapsible-content > div { overflow: hidden; }
+    .collapsible-chevron { transition: transform 0.2s ease; }
+    .collapsible-chevron.open { transform: rotate(180deg); }
+    .chat-bubble {
+      max-width: 85%;
+      animation: slide-up 0.3s ease-out;
+    }
+    .typing-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;
+      display: inline-block;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    .terminal-block {
+      background: #0d1117;
+      border: 1px solid rgba(255,255,255,0.06);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .log-timestamp { color: #06b6d4; }
+    .log-error { color: #f43f5e; font-weight: 600; }
+    .log-warn { color: #f59e0b; }
+    .log-info { color: #06b6d4; }
+    .log-metric { color: #10b981; }
+    .slide-up-1 { animation-delay: 0.05s; }
+    .slide-up-2 { animation-delay: 0.1s; }
+    .slide-up-3 { animation-delay: 0.15s; }
+    .slide-up-4 { animation-delay: 0.2s; }
+    .slide-up-5 { animation-delay: 0.25s; }
+    .slide-up-6 { animation-delay: 0.3s; }
+    .gauge-arc { transition: stroke-dashoffset 1s ease-out; }
+    .file-chip {
+      animation: fade-in 0.2s ease;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-  <div class="max-w-6xl mx-auto p-6 space-y-6">
-    <header class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-semibold">AgentL3 • Incident Copilot</h1>
-        <p class="muted">Upload logs → analyze → results → Q&A with citations.</p>
+<body class="font-sans text-slate-300 min-h-screen">
+
+  <!-- ===== STICKY HEADER ===== -->
+  <header class="glass sticky top-0 z-50 border-b border-white/5">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-indigo-400"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">AgentL3</h1>
+          <p class="text-[10px] text-slate-500 -mt-0.5 hidden sm:block">Incident Haystacker</p>
+        </div>
       </div>
-      <div id="health" class="pill">checking backend…</div>
-    </header>
+      <div id="health" class="flex items-center gap-2 text-xs text-slate-500">
+        <span class="w-2 h-2 rounded-full bg-slate-600 animate-health-pulse" id="healthDot"></span>
+        <span id="healthText">checking...</span>
+      </div>
+    </div>
+  </header>
 
-    <section class="card">
-      <h2 class="text-lg font-semibold mb-3">1) Upload log files</h2>
-      <p class="muted mb-4">Accepted: <span class="mono">.log .txt .json</span> (multiple allowed)</p>
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-      <!-- Controls row -->
-      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-        <input id="fileInput" type="file" multiple class="block w-full text-sm text-slate-600
-               file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
-               file:text-sm file:font-semibold file:bg-slate-900 file:text-white
-               hover:file:bg-slate-800" />
-        <button id="analyzeBtn" class="px-4 py-2 rounded-lg bg-slate-900 text-white disabled:opacity-40">
+    <!-- ===== 1. UPLOAD SECTION ===== -->
+    <section class="card p-5 animate-slide-up slide-up-1">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="upload-cloud" class="w-4 h-4 text-indigo-400"></i>
+        <h2 class="text-sm font-semibold text-slate-100">Upload Log Files</h2>
+        <span class="text-[10px] text-slate-500 font-mono ml-auto">.log .txt .json</span>
+      </div>
+
+      <div id="dropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer group">
+        <input id="fileInput" type="file" multiple class="hidden" accept=".log,.txt,.json" />
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-indigo-500/10 transition-colors">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors"></i>
+          </div>
+          <p class="text-sm text-slate-400">Drop files here or <span class="text-indigo-400 font-medium">browse</span></p>
+          <p class="text-[10px] text-slate-600">Multiple files allowed</p>
+        </div>
+      </div>
+
+      <!-- Sample log picker -->
+      <div class="mt-4 border-t border-white/5 pt-4">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="folder-open" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span class="text-xs text-slate-500 font-medium">Sample logs</span>
+          <span class="text-[10px] text-slate-600">— click to add to selection</span>
+          <button id="clearSamplesBtn" class="ml-auto text-[10px] text-slate-600 hover:text-slate-400 transition-colors hidden">clear all</button>
+        </div>
+        <div id="samplePicker" class="flex flex-wrap gap-1.5">
+          <span class="text-[10px] text-slate-600 italic">loading...</span>
+        </div>
+      </div>
+
+      <div id="fileChips" class="flex flex-wrap gap-2 mt-3"></div>
+
+      <div class="flex items-center gap-3 mt-4">
+        <button id="analyzeBtn" disabled class="btn-primary px-5 py-2 rounded-lg text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="play" class="w-3.5 h-3.5"></i>
           Analyze
         </button>
-        <!-- NEW: live count -->
-        <span id="fileCount" class="muted text-sm">no files selected</span>
+        <span id="fileCount" class="text-xs text-slate-500">No files selected</span>
       </div>
-
-      <!-- NEW: list of selected files -->
-      <div id="fileList" class="mono text-xs text-slate-700 mt-2"></div>
-
-      <p id="uploadHint" class="muted mt-2"></p>
+      <p id="uploadHint" class="text-xs text-rose-400 mt-2"></p>
     </section>
 
-    <section class="card">
-      <h2 class="text-lg font-semibold mb-3">2) Job status</h2>
-      <div class="flex items-center gap-3">
-        <div class="w-full bg-slate-100 rounded-full h-3">
-          <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all" style="width:0%"></div>
+    <!-- ===== 2. PIPELINE STEPPER ===== -->
+    <section id="pipelineSection" class="card p-5 animate-slide-up slide-up-2">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+        <h2 class="text-sm font-semibold text-slate-100">Pipeline</h2>
+        <div id="jobBadge" class="ml-auto flex items-center gap-1.5 hidden">
+          <span class="text-[10px] text-slate-500">JOB</span>
+          <code id="jobId" class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-700 transition-colors" title="Click to copy">-</code>
         </div>
-        <div id="progressNum" class="w-12 text-right tabular-nums">0%</div>
       </div>
-      <div class="mt-3 flex flex-wrap items-center gap-2">
-        <span class="muted">Stage:</span><span id="stage" class="pill">–</span>
-        <span class="muted">Message:</span><span id="message" class="pill">–</span>
-        <span class="muted">Job ID:</span><span id="jobId" class="pill mono">–</span>
+
+      <!-- Stepper -->
+      <div class="flex items-center justify-between mb-4 px-2">
+        <div class="flex items-center flex-1" id="stepperContainer">
+          <!-- Steps injected by JS -->
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+        <div id="progressBar" class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all duration-500 ease-out" style="width:0%"></div>
+      </div>
+      <div class="flex items-center justify-between mt-2">
+        <span id="message" class="text-xs text-slate-500">Waiting for upload...</span>
+        <span id="progressNum" class="text-xs font-mono text-slate-400 tabular-nums">0%</span>
       </div>
     </section>
 
-    <section class="card">
-      <h2 class="text-lg font-semibold mb-3">3) Result</h2>
-      <div id="resultEmpty" class="muted">Run an analysis to see results here.</div>
-      <div id="result" class="hidden space-y-6">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-semibold">Summary</h3>
-            <div class="flex items-center gap-2">
-              <span class="muted text-sm">Confidence</span>
-              <div class="w-40 bg-slate-100 rounded-full h-2">
-                <div id="confBar" class="bg-indigo-500 h-2 rounded-full"></div>
+    <!-- ===== 3. RESULTS ===== -->
+    <section id="resultSection" class="animate-slide-up slide-up-3">
+      <div id="resultEmpty" class="card p-5">
+        <div class="flex items-center gap-2 text-slate-500">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <p class="text-sm">Run an analysis to see results here.</p>
+        </div>
+      </div>
+
+      <div id="result" class="hidden space-y-4">
+        <!-- Summary + Gauge -->
+        <div class="card p-5">
+          <div class="flex flex-col md:flex-row gap-5">
+            <!-- Gauge -->
+            <div class="flex flex-col items-center justify-center flex-shrink-0">
+              <svg width="100" height="60" viewBox="0 0 100 60" class="overflow-visible">
+                <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6" stroke-linecap="round"/>
+                <path id="gaugeArc" d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#6366f1" stroke-width="6" stroke-linecap="round"
+                      class="gauge-arc" stroke-dasharray="125.66" stroke-dashoffset="125.66"/>
+                <text id="gaugeText" x="50" y="48" text-anchor="middle" class="fill-slate-200 text-lg font-bold font-mono" font-size="18">0.00</text>
+                <text x="50" y="58" text-anchor="middle" class="fill-slate-500" font-size="8" font-family="Plus Jakarta Sans">CONFIDENCE</text>
+              </svg>
+            </div>
+            <!-- Summary text -->
+            <div class="flex-1 min-w-0">
+              <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Summary</h3>
+              <p id="summary" class="text-sm text-slate-300 leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline + Evidence -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Timeline -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="timelineContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Timeline</span>
+                <span id="timelineCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
               </div>
-              <span id="confText" class="muted text-sm tabular-nums">0.00</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="timelineContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="timeline" class="space-y-3 relative"></ul>
+              </div>
             </div>
           </div>
-          <p id="summary" class="leading-relaxed"></p>
+
+          <!-- Evidence -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="evidenceContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Evidence</span>
+                <span id="evidenceCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="evidenceContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="evidence" class="space-y-1.5"></ul>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-4">
-            <div>
-              <h4 class="font-semibold mb-2">Timeline</h4>
-              <ul id="timeline" class="space-y-2"></ul>
-            </div>
-            <div>
-              <h4 class="font-semibold mb-2">Immediate evidence</h4>
-              <ul id="evidence" class="list-disc ml-5 space-y-1"></ul>
+        <!-- Root Causes + Next Steps -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Root Causes -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="rootCausesContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="target" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Root Causes</span>
+                <span id="rootCausesCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="rootCausesContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="rootCauses" class="space-y-2.5"></ul>
+              </div>
             </div>
           </div>
-          <div class="space-y-4">
-            <div>
-              <h4 class="font-semibold mb-2">Root causes</h4>
-              <ul id="rootCauses" class="space-y-2"></ul>
-            </div>
-            <div>
-              <h4 class="font-semibold mb-2">Next steps</h4>
-              <ul id="nextSteps" class="list-disc ml-5 space-y-1"></ul>
+
+          <!-- Next Steps -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="nextStepsContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="list-checks" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Next Steps</span>
+                <span id="nextStepsCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="nextStepsContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="nextSteps" class="space-y-1.5"></ul>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 class="font-semibold mb-2">Related cases</h4>
-            <ul id="relatedCases" class="list-disc ml-5 space-y-1"></ul>
+        <!-- Related Cases + References -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Related Cases -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="relatedCasesContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="library" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Related Cases</span>
+                <span id="relatedCasesCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="relatedCasesContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="relatedCases" class="space-y-1.5"></ul>
+              </div>
+            </div>
           </div>
-          <div>
-            <h4 class="font-semibold mb-2">References</h4>
-            <ul id="references" class="space-y-2"></ul>
+
+          <!-- References -->
+          <div class="card p-4">
+            <button class="collapsible-toggle w-full flex items-center justify-between" data-target="referencesContent">
+              <div class="flex items-center gap-2">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider">References</span>
+                <span id="referencesCount" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-mono">0</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open"></i>
+            </button>
+            <div id="referencesContent" class="collapsible-content open mt-3">
+              <div>
+                <ul id="references" class="space-y-2"></ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="card">
-      <h2 class="text-lg font-semibold mb-3">4) Ask a follow-up</h2>
-      <div class="flex flex-col md:flex-row gap-3 items-start md:items-center">
-        <input id="question" class="w-full md:flex-1 px-3 py-2 rounded-lg border border-slate-300"
-               placeholder="e.g. What likely triggered the restarts?" />
-        <button id="askBtn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-40">Ask</button>
+    <!-- ===== 4. Q&A ===== -->
+    <section class="card p-5 animate-slide-up slide-up-4">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="message-circle" class="w-4 h-4 text-indigo-400"></i>
+        <h2 class="text-sm font-semibold text-slate-100">Follow-up Q&A</h2>
       </div>
-      <div id="qa" class="mt-4 hidden">
-        <div class="mb-2">
-          <span class="muted text-sm">Answer confidence</span>
-          <div class="w-40 bg-slate-100 rounded-full h-2 inline-block align-middle ml-2">
-            <div id="qaConfBar" class="bg-indigo-500 h-2 rounded-full"></div>
-          </div>
-          <span id="qaConfText" class="muted text-sm tabular-nums ml-2">0.00</span>
+
+      <div id="qaChatArea" class="space-y-3 mb-4 min-h-[40px]">
+        <p id="qaHint" class="text-xs text-slate-500">Available after an analysis finishes.</p>
+      </div>
+
+      <div id="typingIndicator" class="hidden mb-3">
+        <div class="chat-bubble bg-slate-800 rounded-xl rounded-bl-sm px-4 py-3 inline-flex items-center gap-1.5 ml-0">
+          <span class="typing-dot animate-typing-dot"></span>
+          <span class="typing-dot animate-typing-dot"></span>
+          <span class="typing-dot animate-typing-dot"></span>
         </div>
-        <p id="answer" class="leading-relaxed"></p>
-        <h4 class="font-semibold mt-4">Citations</h4>
-        <ul id="citations" class="mono text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2"></ul>
       </div>
-      <p id="qaHint" class="muted mt-2">Available after an analysis finishes.</p>
+
+      <div class="flex gap-2">
+        <div class="flex-1 relative">
+          <input id="question" class="w-full bg-slate-800 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-colors"
+                 placeholder="e.g. What likely triggered the restarts?" />
+        </div>
+        <button id="askBtn" disabled class="btn-primary w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i data-lucide="arrow-up" class="w-4 h-4 text-white"></i>
+        </button>
+      </div>
     </section>
 
-    <section class="card">
-      <h2 class="text-lg font-semibold mb-3">5) Debug triage query</h2>
-      <button id="showQueryBtn" class="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 disabled:opacity-40">Show triage query</button>
-      <pre id="queryText" class="mono text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 mt-3 hidden overflow-x-auto"></pre>
+    <!-- ===== 5. DEBUG ===== -->
+    <section class="card animate-slide-up slide-up-5 overflow-hidden">
+      <button id="debugToggle" class="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+        <div class="flex items-center gap-2">
+          <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+          <h2 class="text-sm font-semibold text-slate-100">Debug Console</h2>
+        </div>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 collapsible-chevron open" id="debugChevron"></i>
+      </button>
+      <div id="debugContent" class="collapsible-content open">
+        <div class="px-4 pb-4 space-y-3">
+          <button id="showQueryBtn" disabled class="flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40">
+            <i data-lucide="play" class="w-3 h-3"></i>
+            Load triage query
+          </button>
+          <div id="queryContainer" class="hidden">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[10px] text-emerald-400/70 font-mono uppercase">triage_query.txt</span>
+              <button id="copyQueryBtn" class="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                Copy
+              </button>
+            </div>
+            <pre id="queryText" class="terminal-block text-emerald-400/80 text-xs p-4 rounded-lg overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap"></pre>
+          </div>
+        </div>
+      </div>
     </section>
-  </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-5xl mx-auto px-6 py-6 text-center">
+    <p class="text-[10px] text-slate-600">AgentL3 Incident Haystacker</p>
+  </footer>
 
   <script>
+    /* ===== UTILITIES ===== */
     const BACKEND_BASE = `${location.protocol}//${location.host}`;
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { $(id).textContent = v; };
@@ -153,7 +464,127 @@
 
     let currentJobId = null;
     let statusTimer = null;
+    let selectedFiles = [];
 
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function humanSize(bytes) {
+      const units = ["B","KB","MB","GB","TB"];
+      let i = 0, v = Math.max(bytes || 0, 0);
+      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+      return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+    }
+
+    function highlightLog(text) {
+      return escapeHtml(text)
+        .replace(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*Z?)/g, '<span class="log-timestamp">$1</span>')
+        .replace(/\b(ERROR|FATAL|CRIT(?:ICAL)?)\b/g, '<span class="log-error">$1</span>')
+        .replace(/\b(WARN(?:ING)?)\b/g, '<span class="log-warn">$1</span>')
+        .replace(/\b(INFO)\b/g, '<span class="log-info">$1</span>')
+        .replace(/(\d+(?:\.\d+)?(?:ms|s|%|MB|GB|KB))/g, '<span class="log-metric">$1</span>');
+    }
+
+    function reIcon() { lucide.createIcons(); }
+
+    /* ===== PIPELINE STEPPER ===== */
+    const STAGES = ['queued','triage','retrieve','root_cause','synthesize','done'];
+    const STAGE_LABELS = ['Queued','Triage','Retrieve','Root Cause','Synthesize','Done'];
+    const STAGE_ICONS = ['circle','scan','database','target','cpu','circle-check'];
+    let currentStageIdx = -1;
+
+    function buildStepper() {
+      const c = $('stepperContainer');
+      c.innerHTML = '';
+      STAGES.forEach((s, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'flex flex-col items-center relative z-10';
+        dot.id = `step-${s}`;
+        dot.innerHTML = `
+          <div class="stepper-dot bg-slate-700 flex items-center justify-center" id="dot-${s}">
+            <i data-lucide="${STAGE_ICONS[i]}" class="w-2.5 h-2.5 text-slate-500" id="icon-${s}"></i>
+          </div>
+          <span class="text-[9px] mt-1.5 text-slate-600 font-medium whitespace-nowrap">${STAGE_LABELS[i]}</span>`;
+        c.appendChild(dot);
+        if (i < STAGES.length - 1) {
+          const line = document.createElement('div');
+          line.className = 'stepper-line flex-1 bg-slate-700/50 self-start mt-[5px]';
+          line.id = `line-${i}`;
+          c.appendChild(line);
+        }
+      });
+      reIcon();
+    }
+
+    function setIconClass(dot, cls) {
+      // Lucide replaces <i> with <svg> — handle both
+      const ic = dot.querySelector('i') || dot.querySelector('svg');
+      if (!ic) return;
+      if (ic.setAttribute) ic.setAttribute('class', cls);
+      else ic.className = cls;
+    }
+
+    function updateStepper(stage) {
+      const idx = STAGES.indexOf(stage);
+      if (idx === currentStageIdx) return;
+      currentStageIdx = idx;
+      STAGES.forEach((s, i) => {
+        const dot = $(`dot-${s}`);
+        if (!dot) return;
+        dot.classList.remove('animate-pulse-ring');
+        if (i < idx) {
+          dot.className = 'stepper-dot bg-indigo-500 flex items-center justify-center';
+          setIconClass(dot, 'w-2.5 h-2.5 text-white');
+        } else if (i === idx) {
+          dot.className = 'stepper-dot bg-indigo-500 flex items-center justify-center animate-pulse-ring';
+          setIconClass(dot, 'w-2.5 h-2.5 text-white');
+          if (stage === 'done') dot.classList.remove('animate-pulse-ring');
+        } else {
+          dot.className = 'stepper-dot bg-slate-700 flex items-center justify-center';
+          setIconClass(dot, 'w-2.5 h-2.5 text-slate-500');
+        }
+        if (i < STAGES.length - 1) {
+          const line = $(`line-${i}`);
+          if (line) line.style.background = i < idx ? '#6366f1' : '';
+        }
+      });
+    }
+
+    /* ===== CONFIDENCE GAUGE ===== */
+    function setGauge(conf) {
+      const arc = $('gaugeArc');
+      const total = 125.66; // half-circle arc length
+      const offset = total - (conf * total);
+      arc.style.strokeDashoffset = offset;
+      // Color by confidence
+      let color = '#f43f5e'; // rose
+      if (conf >= 0.7) color = '#10b981'; // emerald
+      else if (conf >= 0.4) color = '#f59e0b'; // amber
+      arc.style.stroke = color;
+      $('gaugeText').textContent = `${Math.round(conf * 100)}%`;
+    }
+
+    /* ===== COLLAPSIBLE SECTIONS ===== */
+    document.addEventListener('click', (e) => {
+      const toggle = e.target.closest('.collapsible-toggle');
+      if (!toggle) return;
+      const targetId = toggle.dataset.target;
+      const content = $(targetId);
+      const chevron = toggle.querySelector('.collapsible-chevron');
+      content.classList.toggle('open');
+      chevron.classList.toggle('open');
+    });
+
+    /* ===== DEBUG TOGGLE ===== */
+    $('debugToggle').addEventListener('click', () => {
+      const content = $('debugContent');
+      const chevron = $('debugChevron');
+      content.classList.toggle('open');
+      chevron.classList.toggle('open');
+    });
+
+    /* ===== HEALTH CHECK ===== */
     async function checkHealth() {
       try {
         const res = await fetch(`${BACKEND_BASE}/healthz`);
@@ -161,71 +592,118 @@
         const ok = data?.ok;
         const tags = [];
         for (const [k,v] of Object.entries(data?.env || {})) {
-          tags.push(`${k}:${v ? '✔︎' : '✖︎'}`);
+          tags.push(`${k.replace('_set','')}: ${v ? 'OK' : 'missing'}`);
         }
-        const el = $('health');
-        el.textContent = ok ? `backend: healthy (${tags.join(' · ')})` : 'backend: unreachable';
-        el.className = ok ? 'pill bg-emerald-50 text-emerald-700' : 'pill bg-rose-50 text-rose-700';
+        const dot = $('healthDot');
+        const text = $('healthText');
+        if (ok) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-health-pulse';
+          text.textContent = tags.join(' | ');
+          text.className = 'text-xs text-emerald-400/80';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-rose-400 animate-health-pulse';
+          text.textContent = 'unreachable';
+          text.className = 'text-xs text-rose-400';
+        }
       } catch {
-        const el = $('health');
-        el.textContent = 'backend: unreachable';
-        el.className = 'pill bg-rose-50 text-rose-700';
+        $('healthDot').className = 'w-2 h-2 rounded-full bg-rose-400 animate-health-pulse';
+        $('healthText').textContent = 'unreachable';
+        $('healthText').className = 'text-xs text-rose-400';
       }
     }
 
-    // ---------- NEW: file selection preview (count + names) ----------
-    const fileInput   = $('fileInput');
-    const fileCountEl = $('fileCount');
-    const fileListEl  = $('fileList');
+    /* ===== FILE UPLOAD (DRAG & DROP + CLICK) ===== */
+    const dropZone = $('dropZone');
+    const fileInput = $('fileInput');
 
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      addFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => addFiles(fileInput.files));
 
-    function humanSize(bytes) {
-      const units = ["B","KB","MB","GB","TB"];
-      let i = 0, v = Math.max(bytes || 0, 0);
-      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-      const fixed = v < 10 && i > 0 ? 1 : 0;
-      return `${v.toFixed(fixed)} ${units[i]}`;
-    }
-
-    function renderSelectedFiles(list) {
-      const files = Array.from(list || []);
-      if (files.length === 0) {
-        fileCountEl.textContent = "no files selected";
-        fileListEl.innerHTML = "";
-        return;
+    function addFiles(fileList) {
+      const newFiles = Array.from(fileList || []);
+      // Merge, avoiding dupes by name+size
+      for (const f of newFiles) {
+        if (!selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
+          selectedFiles.push(f);
+        }
       }
-      fileCountEl.textContent = files.length === 1 ? "1 file" : `${files.length} files`;
-      fileListEl.innerHTML = `
-        <ul class="list-disc ml-5">
-          ${files.map(f => `
-            <li>${escapeHtml(f.name)} <span class="text-slate-400">(${humanSize(f.size)})</span></li>
-          `).join("")}
-        </ul>
-      `;
+      renderFileChips();
     }
 
-    // Initial render & on change
-    renderSelectedFiles(fileInput.files);
-    fileInput.addEventListener('change', () => renderSelectedFiles(fileInput.files));
-    // ----------------------------------------------------------------
+    function removeFile(index) {
+      const removed = selectedFiles[index];
+      if (removed && removed._sample) selectedSamples.delete(removed.name);
+      selectedFiles.splice(index, 1);
+      renderFileChips();
+      // refresh sample chip highlight state
+      const picker = $('samplePicker');
+      if (picker) picker.querySelectorAll('.sample-chip').forEach(btn => {
+        const name = btn.dataset.name;
+        const sel = selectedSamples.has(name);
+        btn.className = `sample-chip text-[11px] font-mono px-2.5 py-1 rounded border transition-all ${
+          sel ? 'bg-[#4caf50] border-[#43a047] text-white font-semibold'
+              : 'bg-slate-800 border-white/5 text-slate-400 hover:border-[#4caf50]/40 hover:text-slate-300'
+        }`;
+      });
+      $('clearSamplesBtn').classList.toggle('hidden', selectedSamples.size === 0);
+    }
 
+    function renderFileChips() {
+      const container = $('fileChips');
+      container.innerHTML = '';
+      selectedFiles.forEach((f, i) => {
+        if (f._sample) return; // sample files shown in picker only
+        const chip = document.createElement('div');
+        const isSample = false;
+        chip.className = isSample
+          ? 'file-chip flex items-center gap-1.5 bg-[#4caf50] border border-[#43a047] rounded-md px-2.5 py-1.5 text-xs'
+          : 'file-chip flex items-center gap-1.5 bg-slate-800 border border-white/5 rounded-md px-2.5 py-1.5 text-xs';
+        chip.innerHTML = `
+          <i data-lucide="file-text" class="w-3 h-3 ${isSample ? 'text-white/80' : 'text-slate-400'} flex-shrink-0"></i>
+          <span class="${isSample ? 'text-white font-semibold' : 'text-slate-300'} truncate max-w-[140px]">${escapeHtml(f.name)}</span>
+          <span class="${isSample ? 'text-white/70' : 'text-slate-500'} flex-shrink-0">${humanSize(f.size)}</span>
+          <button class="ml-1 ${isSample ? 'text-white/70 hover:text-white' : 'text-slate-500 hover:text-rose-400'} transition-colors flex-shrink-0" data-idx="${i}">
+            <i data-lucide="x" class="w-3 h-3"></i>
+          </button>`;
+        chip.querySelector('button').addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeFile(i);
+        });
+        container.appendChild(chip);
+      });
+      reIcon();
+
+      const count = selectedFiles.length;
+      const sampleCount = selectedFiles.filter(f => f._sample).length;
+      const uploadCount = count - sampleCount;
+      let label = 'No files selected';
+      if (count > 0) {
+        const parts = [];
+        if (uploadCount > 0) parts.push(`${uploadCount} uploaded`);
+        if (sampleCount > 0) parts.push(`${sampleCount} sample${sampleCount > 1 ? 's' : ''}`);
+        label = parts.join(', ');
+      }
+      $('fileCount').textContent = label;
+      $('analyzeBtn').disabled = count === 0;
+    }
+
+    /* ===== ANALYZE ===== */
     $('analyzeBtn').addEventListener('click', async () => {
-      const files = $('fileInput').files;
-      if (!files || !files.length) {
+      if (!selectedFiles.length) {
         $('uploadHint').textContent = 'Please select one or more files first.';
         return;
       }
       $('uploadHint').textContent = '';
 
       const fd = new FormData();
-      for (const f of files) fd.append('files', f);
+      for (const f of selectedFiles) fd.append('files', f);
 
       $('analyzeBtn').disabled = true;
       try {
@@ -234,14 +712,14 @@
         const { job_id } = await res.json();
         currentJobId = job_id;
         setText('jobId', job_id);
-        setText('stage', 'queued');
-        setText('message', 'Queued');
+        show('jobBadge');
+        updateStepper('queued');
+        setText('message', 'Queued...');
         setText('progressNum', '0%');
         setWidthPct($('progressBar'), 0);
         hide('result'); show('resultEmpty');
         $('askBtn').disabled = true;
-        $('qa').classList.add('hidden');
-        $('queryText').classList.add('hidden');
+        hide('queryContainer');
         $('showQueryBtn').disabled = false;
         if (statusTimer) clearInterval(statusTimer);
         statusTimer = setInterval(pollStatus, 800);
@@ -252,14 +730,15 @@
       }
     });
 
+    /* ===== POLL STATUS ===== */
     async function pollStatus() {
       if (!currentJobId) return;
       try {
         const res = await fetch(`${BACKEND_BASE}/status/${currentJobId}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        setText('stage', data.stage || '—');
-        setText('message', data.message || '—');
+        updateStepper(data.stage || 'queued');
+        setText('message', data.message || '-');
         setText('progressNum', `${data.progress ?? 0}%`);
         setWidthPct($('progressBar'), data.progress ?? 0);
         if (data.stage === 'done') {
@@ -267,104 +746,193 @@
           await loadResult();
           $('askBtn').disabled = false;
         }
-        if (data.stage === 'error') clearInterval(statusTimer);
+        if (data.stage === 'error') {
+          clearInterval(statusTimer);
+          setText('message', `Error: ${data.message || 'Unknown error'}`);
+        }
       } catch (e) {
         // keep polling quietly
       }
     }
 
+    /* ===== LOAD RESULT ===== */
     async function loadResult() {
       const res = await fetch(`${BACKEND_BASE}/result/${currentJobId}`);
       if (!res.ok) { hide('result'); show('resultEmpty'); return; }
       const r = await res.json();
       hide('resultEmpty'); show('result');
 
-      setText('summary', r.summary || '—');
+      // Summary + gauge
+      setText('summary', r.summary || '-');
       const conf = Number(r.confidence ?? 0);
-      setWidthPct($('confBar'), conf * 100);
-      setText('confText', conf.toFixed(2));
+      setGauge(conf);
 
+      // Timeline
       const t = $('timeline'); t.innerHTML = '';
-      (r.timeline || []).forEach(ev => {
+      const timelineItems = r.timeline || [];
+      setText('timelineCount', timelineItems.length);
+      timelineItems.forEach((ev, i) => {
         const li = document.createElement('li');
-        li.innerHTML = `<div class="flex items-start gap-3">
-          <span class="pill mono">${ev.time || '-'}</span>
-          <div><div class="mono text-xs uppercase muted">${ev.source || ''}</div>${ev.message || ''}</div>
-        </div>`;
+        li.className = 'flex items-start gap-3 animate-slide-up';
+        li.style.animationDelay = `${i * 50}ms`;
+        li.innerHTML = `
+          <div class="flex flex-col items-center flex-shrink-0 mt-0.5">
+            <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+            ${i < timelineItems.length - 1 ? '<div class="w-px h-full bg-slate-700 mt-1"></div>' : ''}
+          </div>
+          <div class="pb-2 min-w-0">
+            <code class="text-[10px] font-mono text-cyan-400">${escapeHtml(ev.time || '-')}</code>
+            <span class="text-[10px] text-slate-500 ml-2 uppercase">${escapeHtml(ev.source || '')}</span>
+            <p class="text-xs text-slate-300 mt-0.5">${escapeHtml(ev.message || '')}</p>
+          </div>`;
         t.appendChild(li);
       });
 
+      // Evidence
       const evul = $('evidence'); evul.innerHTML = '';
-      (r.immediate_evidence || []).forEach(s => {
-        const li = document.createElement('li'); li.textContent = s; evul.appendChild(li);
+      const evidenceItems = r.immediate_evidence || [];
+      setText('evidenceCount', evidenceItems.length);
+      evidenceItems.forEach(s => {
+        const li = document.createElement('li');
+        li.className = 'flex items-start gap-2 text-xs text-slate-300';
+        li.innerHTML = `<span class="text-amber-400 mt-0.5 flex-shrink-0">&#x25CF;</span><span>${escapeHtml(s)}</span>`;
+        evul.appendChild(li);
       });
 
+      // Root Causes
       const rc = $('rootCauses'); rc.innerHTML = '';
-      (r.root_causes || []).forEach(x => {
-        const li = document.createElement('li');
+      const rootCauseItems = r.root_causes || [];
+      setText('rootCausesCount', rootCauseItems.length);
+      rootCauseItems.forEach(x => {
         const c = Number(x.confidence ?? 0);
-        li.innerHTML = `<div class="flex items-center justify-between">
-          <div>${x.cause || ''}</div>
+        let barColor = 'bg-rose-400';
+        if (c >= 0.7) barColor = 'bg-emerald-400';
+        else if (c >= 0.4) barColor = 'bg-amber-400';
+        const li = document.createElement('li');
+        li.className = 'bg-slate-800/50 rounded-lg p-3 border border-white/[0.03]';
+        li.innerHTML = `
+          <p class="text-xs text-slate-300 mb-2">${escapeHtml(x.cause || '')}</p>
           <div class="flex items-center gap-2">
-            <span class="muted text-xs">conf</span>
-            <div class="w-24 bg-slate-100 rounded-full h-2">
-              <div class="bg-emerald-500 h-2 rounded-full" style="width:${(c*100).toFixed(0)}%"></div>
+            <div class="flex-1 bg-slate-700 rounded-full h-1">
+              <div class="${barColor} h-1 rounded-full" style="width:${(c*100).toFixed(0)}%"></div>
             </div>
-            <span class="muted text-xs tabular-nums">${c.toFixed(2)}</span>
-          </div>
-        </div>`;
+            <span class="text-[10px] font-mono text-slate-400 tabular-nums">${c.toFixed(2)}</span>
+          </div>`;
         rc.appendChild(li);
       });
 
+      // Next Steps
       const ns = $('nextSteps'); ns.innerHTML = '';
-      (r.next_steps || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ns.appendChild(li); });
-
-      const rel = $('relatedCases'); rel.innerHTML = '';
-      (r.related_cases || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; rel.appendChild(li); });
-
-      const ref = $('references'); ref.innerHTML = '';
-      (r.references || []).forEach(x => {
+      const nextStepItems = r.next_steps || [];
+      setText('nextStepsCount', nextStepItems.length);
+      nextStepItems.forEach(s => {
         const li = document.createElement('li');
-        li.innerHTML = `<div class="p-3 rounded-lg border border-slate-200 bg-slate-50">
-          <div class="mono text-xs uppercase muted mb-1">${x.source || 'source'}</div>
-          <div class="mono text-sm whitespace-pre-wrap">${x.snippet || ''}</div>
-        </div>`;
+        li.className = 'flex items-start gap-2 text-xs text-slate-300';
+        li.innerHTML = `<i data-lucide="chevron-right" class="w-3 h-3 text-emerald-400 mt-0.5 flex-shrink-0"></i><span>${escapeHtml(s)}</span>`;
+        ns.appendChild(li);
+      });
+
+      // Related Cases
+      const rel = $('relatedCases'); rel.innerHTML = '';
+      const relatedItems = r.related_cases || [];
+      setText('relatedCasesCount', relatedItems.length);
+      relatedItems.forEach(s => {
+        const li = document.createElement('li');
+        li.className = 'flex items-start gap-2 text-xs text-slate-300';
+        li.innerHTML = `<i data-lucide="link" class="w-3 h-3 text-indigo-400 mt-0.5 flex-shrink-0"></i><span>${escapeHtml(s)}</span>`;
+        rel.appendChild(li);
+      });
+
+      // References
+      const ref = $('references'); ref.innerHTML = '';
+      const refItems = r.references || [];
+      setText('referencesCount', refItems.length);
+      refItems.forEach(x => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="terminal-block rounded-lg p-3">
+            <div class="text-[10px] text-cyan-400/60 uppercase mb-1.5 font-mono">${escapeHtml(x.source || 'source')}</div>
+            <div class="text-xs whitespace-pre-wrap leading-relaxed">${highlightLog(x.snippet || '')}</div>
+          </div>`;
         ref.appendChild(li);
       });
+
+      reIcon();
     }
 
-    $('askBtn').addEventListener('click', async () => {
+    /* ===== Q&A ===== */
+    $('askBtn').addEventListener('click', askQuestion);
+    $('question').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askQuestion(); }});
+
+    async function askQuestion() {
       const q = $('question').value.trim();
       if (!currentJobId || !q) return;
       $('askBtn').disabled = true;
-      $('qa').classList.add('hidden');
       $('qaHint').textContent = '';
+
+      // Add user bubble
+      const chatArea = $('qaChatArea');
+      const userBubble = document.createElement('div');
+      userBubble.className = 'flex justify-end';
+      userBubble.innerHTML = `<div class="chat-bubble bg-indigo-600 text-white rounded-xl rounded-br-sm px-4 py-2.5 text-sm">${escapeHtml(q)}</div>`;
+      chatArea.appendChild(userBubble);
+
+      // Show typing indicator
+      show('typingIndicator');
+      $('question').value = '';
+
       try {
         const res = await fetch(`${BACKEND_BASE}/ask/${currentJobId}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: q })
         });
+        hide('typingIndicator');
         if (res.status === 404) { $('qaHint').textContent = 'Q&A endpoint not available on this backend.'; return; }
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        setText('answer', data.answer || '—');
+
+        // Answer bubble
+        const answerBubble = document.createElement('div');
+        answerBubble.className = 'flex justify-start';
         const c = Number(data.confidence ?? 0);
-        setWidthPct($('qaConfBar'), c * 100);
-        setText('qaConfText', c.toFixed(2));
-        const ul = $('citations'); ul.innerHTML = '';
-        (data.citations || []).forEach(x => {
-          const li = document.createElement('li');
-          li.textContent = `${x.source || 'app.log'}  —  ${x.snippet || ''}`;
-          ul.appendChild(li);
-        });
-        $('qa').classList.remove('hidden');
+        let confColor = 'text-rose-400';
+        if (c >= 0.7) confColor = 'text-emerald-400';
+        else if (c >= 0.4) confColor = 'text-amber-400';
+        let citationsHtml = '';
+        if (data.citations && data.citations.length) {
+          citationsHtml = `
+            <div class="mt-3 pt-2 border-t border-white/5">
+              <p class="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Citations</p>
+              ${data.citations.map(x => `
+                <div class="terminal-block rounded p-2 mb-1 text-[11px]">
+                  <span class="text-cyan-400/60">${escapeHtml(x.source || 'app.log')}</span>
+                  <span class="text-slate-500 mx-1">-</span>
+                  <span>${highlightLog(x.snippet || '')}</span>
+                </div>`).join('')}
+            </div>`;
+        }
+        answerBubble.innerHTML = `
+          <div class="chat-bubble bg-slate-800 border border-white/5 rounded-xl rounded-bl-sm px-4 py-3">
+            <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(data.answer || '-')}</p>
+            <div class="flex items-center gap-1.5 mt-2">
+              <span class="text-[10px] text-slate-500">conf</span>
+              <span class="text-[10px] font-mono ${confColor} tabular-nums">${c.toFixed(2)}</span>
+            </div>
+            ${citationsHtml}
+          </div>`;
+        chatArea.appendChild(answerBubble);
       } catch (e) {
-        $('qaHint').textContent = `Ask failed: ${e}`;
+        hide('typingIndicator');
+        const errBubble = document.createElement('div');
+        errBubble.className = 'flex justify-start';
+        errBubble.innerHTML = `<div class="chat-bubble bg-rose-500/10 border border-rose-500/20 rounded-xl rounded-bl-sm px-4 py-2.5 text-xs text-rose-400">Ask failed: ${escapeHtml(String(e))}</div>`;
+        chatArea.appendChild(errBubble);
       } finally {
         $('askBtn').disabled = false;
       }
-    });
+    }
 
+    /* ===== DEBUG QUERY ===== */
     $('showQueryBtn').addEventListener('click', async () => {
       if (!currentJobId) return;
       $('showQueryBtn').disabled = true;
@@ -372,17 +940,111 @@
         const res = await fetch(`${BACKEND_BASE}/debug/query/${currentJobId}`);
         if (!res.ok) throw new Error(await res.text());
         const txt = await res.text();
-        $('queryText').textContent = txt;
-        $('queryText').classList.remove('hidden');
+        $('queryText').innerHTML = highlightLog(txt);
+        show('queryContainer');
       } catch (e) {
         $('queryText').textContent = `Not available: ${e}`;
-        $('queryText').classList.remove('hidden');
+        show('queryContainer');
       } finally {
         $('showQueryBtn').disabled = false;
       }
     });
 
+    /* ===== COPY BUTTONS ===== */
+    $('jobId').addEventListener('click', () => {
+      if (currentJobId) {
+        navigator.clipboard.writeText(currentJobId);
+        const el = $('jobId');
+        const orig = el.textContent;
+        el.textContent = 'copied!';
+        setTimeout(() => el.textContent = orig, 1200);
+      }
+    });
+
+    $('copyQueryBtn').addEventListener('click', () => {
+      const text = $('queryText').textContent;
+      navigator.clipboard.writeText(text);
+      const btn = $('copyQueryBtn');
+      btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Copied';
+      reIcon();
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i> Copy';
+        reIcon();
+      }, 1500);
+    });
+
+    /* ===== SAMPLE LOG PICKER ===== */
+    const selectedSamples = new Set();
+
+    async function loadSamples() {
+      try {
+        const res = await fetch(`${BACKEND_BASE}/samples`);
+        const data = await res.json();
+        renderSamplePicker(data.files || []);
+      } catch {
+        $('samplePicker').innerHTML = '<span class="text-[10px] text-rose-400/70">Could not load samples</span>';
+      }
+    }
+
+    function renderSamplePicker(files) {
+      const container = $('samplePicker');
+      container.innerHTML = '';
+      files.forEach(name => {
+        const btn = document.createElement('button');
+        const isSelected = selectedSamples.has(name);
+        btn.className = `sample-chip text-[11px] font-mono px-2.5 py-1 rounded border transition-all ${
+          isSelected
+            ? 'bg-[#4caf50] border-[#43a047] text-white font-semibold'
+            : 'bg-slate-800 border-white/5 text-slate-400 hover:border-[#4caf50]/40 hover:text-slate-300'
+        }`;
+        btn.textContent = name;
+        btn.dataset.name = name;
+        btn.addEventListener('click', () => toggleSample(name, files));
+        container.appendChild(btn);
+      });
+      $('clearSamplesBtn').classList.toggle('hidden', selectedSamples.size === 0);
+    }
+
+    async function toggleSample(name, allFiles) {
+      if (selectedSamples.has(name)) {
+        // Deselect — remove from selectedFiles
+        selectedSamples.delete(name);
+        selectedFiles = selectedFiles.filter(f => !(f._sample && f.name === name));
+        renderFileChips();
+        renderSamplePicker(allFiles);
+        return;
+      }
+      // Select — fetch and create a File object
+      try {
+        const res = await fetch(`${BACKEND_BASE}/samples/${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error('fetch failed');
+        const blob = await res.blob();
+        const file = new File([blob], name, { type: 'text/plain' });
+        file._sample = true; // tag so we can remove it on deselect
+        selectedSamples.add(name);
+        if (!selectedFiles.some(f => f.name === name)) selectedFiles.push(file);
+        renderFileChips();
+        renderSamplePicker(allFiles);
+      } catch {
+        // silently ignore
+      }
+    }
+
+    $('clearSamplesBtn').addEventListener('click', async () => {
+      selectedSamples.forEach(name => {
+        selectedFiles = selectedFiles.filter(f => !(f._sample && f.name === name));
+      });
+      selectedSamples.clear();
+      renderFileChips();
+      // re-render picker — need to reload file list
+      loadSamples();
+    });
+
+    /* ===== INIT ===== */
+    buildStepper();
     checkHealth();
+    loadSamples();
+    reIcon();
   </script>
 </body>
 </html>

@@ -30,8 +30,8 @@ from pydantic import BaseModel
 # Our helpers:
 # - retrieve_related_context() talks to Pinecone to find similar cases
 # - synthesize_with_llm() and answer_question() talk to the LLM (or use a fallback)
-from app.rag.retriever import retrieve_related_context
-from app.synthesis import synthesize_with_llm, answer_question
+from .rag.retriever import retrieve_related_context
+from .synthesis import synthesize_with_llm, answer_question
 
 # These classes define the exact shape of JSON our endpoints return.
 from .schemas import AnalysisJobStatus, IncidentSummary, TimelineEvent, RootCause
@@ -52,7 +52,7 @@ RESULTS: Dict[str, IncidentSummary] = {}
 
 
 # ---------- Start the FastAPI app + allow browser calls ----------
-app = FastAPI(title="AgentL3 - Backend", version="0.1.0")
+app = FastAPI(title="AgentL3 - Backend-RELOADTEST!", version="0.1.0")
 
 # CORS is wide open so our local web page can talk to this API.
 app.add_middleware(
@@ -115,7 +115,7 @@ def _save_uploads(job_dir: str, files: List[UploadFile]) -> List[str]:
 # ---------- The background pipeline that does the work ----------
 def _simulate_pipeline(job_id: str):
     """
-    We process a job in 3 kid-friendly steps:
+    We process a job in 3 steps:
 
       1) TRIAGE   — skim the logs, keep the most interesting lines
       2) RETRIEVE — ask Pinecone for similar past cases
@@ -322,6 +322,26 @@ def ask(job_id: str, payload: QnARequest):
 
     out = answer_question(payload.question, top_lines, related)
     return QnAResponse(**out)  # Pydantic turns the dict into the response model
+
+
+# ---------- Sample log files ----------
+SAMPLES_DIR = Path(__file__).resolve().parents[2] / "data" / "log_samples"
+
+@app.get("/samples")
+def list_samples():
+    """Return list of available sample log filenames."""
+    files = sorted(p.name for p in SAMPLES_DIR.glob("*.log") if p.is_file())
+    return {"files": files}
+
+@app.get("/samples/{filename}")
+def get_sample(filename: str):
+    """Return the raw content of a sample log file."""
+    # Sanitize: only allow simple filenames, no path traversal
+    safe = Path(filename).name
+    path = SAMPLES_DIR / safe
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return Response(content=path.read_bytes(), media_type="text/plain")
 
 
 # ---------- Serve the tiny web UI from the same server ----------

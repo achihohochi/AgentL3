@@ -4,7 +4,7 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 import os, glob
-from app.rag.store import upsert_texts
+from .rag.store import upsert_texts
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 KNOW = os.path.abspath(os.path.join(ROOT, "data", "knowledge"))
